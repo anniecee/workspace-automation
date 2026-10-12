@@ -1,0 +1,50 @@
+name: Claude Code
+
+# Responds to "@claude" mentions in issues, pull requests, and reviews.
+# Needs the Claude GitHub App installed on this repo and a repository secret named
+# CLAUDE_CODE_OAUTH_TOKEN (create it with `claude setup-token`; it uses your Claude subscription).
+# Without the secret the job skips itself.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Check for the Claude token
+        id: token
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN is not set, skipping Claude."
+          fi
+      - uses: actions/checkout@v6
+        if: steps.token.outputs.present == 'true'
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        if: steps.token.outputs.present == 'true'
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

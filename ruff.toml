@@ -1,0 +1,7 @@
+# The templates contain {{placeholders}} and are not valid Python or TOML until they are rendered.
+extend-exclude = ["templates"]
+line-length = 120
+
+[lint]
+# Pinned so the result does not change when ruff changes its default rule set.
+select = ["E4", "E7", "E9", "F"]
